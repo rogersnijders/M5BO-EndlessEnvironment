@@ -64,6 +64,7 @@ public class Player : MonoBehaviour
         {
             anim.SetBool("IsWalking", true);
             TurnCheck();
+            
             Dust();
 
         }
