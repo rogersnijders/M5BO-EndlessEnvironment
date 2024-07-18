@@ -6,6 +6,8 @@ public class Player : MonoBehaviour
 {
     [Header("Movement")]
     [SerializeField] private float moveSpeed = 7.5f;
+    public ParticleSystem trailFX;
+
 
     [Header("Jump")]
     [SerializeField] private float jumpForce = 5f;
@@ -49,6 +51,7 @@ public class Player : MonoBehaviour
         Move();
         Jump();
 
+
     }
 
     #region Movement
@@ -61,16 +64,30 @@ public class Player : MonoBehaviour
         {
             anim.SetBool("IsWalking", true);
             TurnCheck();
+            Dust();
+
         }
 
         else
         {
             anim.SetBool("IsWalking", false);
+
         }
 
         rb.velocity = new Vector2(moveInput * moveSpeed, rb.velocity.y);
 
     }
+
+    private void Dust()
+{       if (IsGrounded())
+        {
+            trailFX.Play();
+        }
+        else
+        {
+            trailFX.Stop();
+        }
+}
 
     private void Jump()
     {
@@ -82,6 +99,8 @@ public class Player : MonoBehaviour
             rb.velocity = new Vector2(rb.velocity.x, jumpForce);
 
             anim.SetTrigger("jump");
+            trailFX.Stop();
+
         }
 
         //button is held
@@ -90,7 +109,8 @@ public class Player : MonoBehaviour
             if (JumpTimeCounter > 0 && IsJumping)
             {
 
-                rb.velocity = new Vector2(rb.velocity.x, jumpForce);
+                // rb.velocity = new Vector2(rb.velocity.x, jumpForce);
+                rb.velocity = new Vector2(0, jumpForce);
                 JumpTimeCounter -= Time.deltaTime;
             }
             else if(JumpTimeCounter == 0) 
@@ -102,6 +122,7 @@ public class Player : MonoBehaviour
             {
                 IsJumping = false;
                 anim.ResetTrigger("jump");
+                
            }
         }
 

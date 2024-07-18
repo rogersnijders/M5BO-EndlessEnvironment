@@ -8,6 +8,8 @@ public class PlayerMovement : MonoBehaviour
     public float groundSpeed;
     public float jumpSpeed;
     public float acceleration;
+    public ParticleSystem trailFX;
+
     [Range(0f, 1f)]
     public float groundDecay;
     public Rigidbody2D body;
@@ -17,11 +19,13 @@ public class PlayerMovement : MonoBehaviour
     public bool grounded;
     float xInput;
     float yInput;
+    private Animator anim;
+
 
     // Start is called before the first frame update
     void Start()
     {
-
+        anim = GetComponent<Animator>();
     }
 
     // Update is called once per frame
@@ -35,8 +39,7 @@ public class PlayerMovement : MonoBehaviour
         CheckGround();
         ApplyFriction();
         MoveWithInput();
-
-
+        
     }
 
 
@@ -50,6 +53,7 @@ public class PlayerMovement : MonoBehaviour
     {
         if (Mathf.Abs(xInput) > 0)
         {
+            trailFX.Play();
             float increment = xInput * acceleration;
             float newSpeed = Mathf.Clamp(body.velocity.x + increment, -groundSpeed, groundSpeed);
             body.velocity = new Vector2(newSpeed, body.velocity.y);
@@ -63,6 +67,9 @@ public class PlayerMovement : MonoBehaviour
         if (Input.GetButtonDown("Jump") && grounded)
         {
             body.velocity = new Vector2(body.velocity.x, jumpSpeed);
+            trailFX.Stop();
+            anim.SetTrigger("jump");
+
         }
     }
     void CheckGround()
