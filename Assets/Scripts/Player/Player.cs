@@ -1,17 +1,15 @@
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 public class Player : MonoBehaviour
 {
     [Header("Movement")]
-    [SerializeField] private float moveSpeed = 7.5f;
+    [SerializeField] private float moveSpeed = 10.0f;
     public ParticleSystem trailFX;
 
-
     [Header("Jump")]
-    [SerializeField] private float jumpForce = 5f;
-    [SerializeField] private float jumpTime = 0.5f;
+    [SerializeField] private float jumpForce = 8.0f;
+    [SerializeField] private float jumpTime = 0.1f;
 
     [Header("Turn Check")]
     [SerializeField] private GameObject DirL;
@@ -39,82 +37,89 @@ public class Player : MonoBehaviour
         rb = GetComponent<Rigidbody2D>();
         anim = GetComponent<Animator>();
         coll = GetComponent<Collider2D>();
-
-
         StartDirectionCheck();
-
     }
 
     private void Update()
     {
-
         Move();
         Jump();
-
-
     }
 
     #region Movement
-    private void Move()
+private void Move()
+{
+    moveInput = UserInput.instance.moveInput.x;
+
+    // Check if the character is moving left or right
+    if (moveInput != 0)
     {
+        anim.SetBool("IsWalking", true);
+        TurnCheck();
+    }
+    else
+    {
+        anim.SetBool("IsWalking", false);
+    }
 
-        moveInput = UserInput.instance.moveInput.x;
-
-        if (moveInput > 0 || moveInput < 0)
-        {
-            anim.SetBool("IsWalking", true);
-            TurnCheck();
-            
-            Dust();
-
-        }
-
-        else
-        {
-            anim.SetBool("IsWalking", false);
-
-        }
-
+    // Update horizontal velocity only if the character is grounded
+    if (IsGrounded())
+    {
         rb.velocity = new Vector2(moveInput * moveSpeed, rb.velocity.y);
+    }
+    else
+    {
+        // If the character is in the air, maintain the current horizontal velocity
+        // rb.velocity = new Vector2(0, rb.velocity.y);
+        rb.velocity = new Vector2(moveInput * (moveSpeed/2), rb.velocity.y);
 
     }
 
-    private void Dust()
-{       if (IsGrounded())
+    // Always check and update the dust effect
+    Dust();
+}
+
+private void Dust()
+{
+    if (IsGrounded() && moveInput != 0)
+    {
+        if (!trailFX.isPlaying)
         {
             trailFX.Play();
         }
-        else
+    }
+    else
+    {
+        if (trailFX.isPlaying)
         {
             trailFX.Stop();
         }
+    }
 }
+
 
     private void Jump()
     {
-        //button was pushed this frame
+        // Button was pressed this frame and character is grounded
         if (UserInput.instance.controls.Jumping.Jump.WasPressedThisFrame() && IsGrounded())
         {
             IsJumping = true;
             JumpTimeCounter = jumpTime;
-            rb.velocity = new Vector2(rb.velocity.x, jumpForce);
+            rb.velocity = new Vector2(0, jumpForce); // Set horizontal velocity to 0 when jumping
 
             anim.SetTrigger("jump");
             trailFX.Stop();
-
         }
 
-        //button is held
+        // Button is held
         if (UserInput.instance.controls.Jumping.Jump.IsPressed())
         {
             if (JumpTimeCounter > 0 && IsJumping)
             {
-
-                // rb.velocity = new Vector2(rb.velocity.x, jumpForce);
-                rb.velocity = new Vector2(0, jumpForce);
+                rb.velocity = new Vector2(0, jumpForce); // Maintain horizontal velocity as 0
                 JumpTimeCounter -= Time.deltaTime;
             }
-            else if(JumpTimeCounter == 0) 
+            else if (JumpTimeCounter <= 0)
             {
                 IsFalling = true;
                 IsJumping = false;
@@ -123,93 +128,57 @@ public class Player : MonoBehaviour
             {
                 IsJumping = false;
                 anim.ResetTrigger("jump");
-                
-           }
+            }
         }
 
-
-        //button was released this frame    
+        // Button was released this frame
         if (UserInput.instance.controls.Jumping.Jump.WasReleasedThisFrame())
         {
             IsJumping = false;
             IsFalling = true;
         }
 
-        if(!IsJumping && CheckForLand())
+        // Check for landing
+        if (!IsJumping && CheckForLand())
         {
             anim.SetTrigger("land");
             resetTriggerCoroutine = StartCoroutine(Reset());
-
         }
 
+        // Draw ground check (assuming it's for debugging purposes)
         DrawGroundCheck();
-
     }
-
     #endregion
-    #region Ground/Landed Check
 
+    #region Ground/Landed Check
     private bool IsGrounded()
     {
         groundHit = Physics2D.BoxCast(coll.bounds.center, coll.bounds.size, 0f, Vector2.down, extraHeight, whatIsGround);
 
-        if (groundHit.collider != null)
-        {
-            return true;
-
-        }
-        else
-        {
-            return false;
-        }
+        return groundHit.collider != null;
     }
+
     private bool CheckForLand()
     {
-        if (IsFalling)
+        if (IsFalling && IsGrounded())
         {
-            if (IsGrounded())
-            {
-                //player has landed
-                IsFalling = false;
-
-                return true;
-            }
-
-            else
-            {
-                return false;
-            }
+            IsFalling = false;
+            return true;
         }
-
-        else
-        {
-            return false;
-        }
-        
+        return false;
     }
-private IEnumerator Reset()
+
+    private IEnumerator Reset()
     {
         yield return null;
-
         anim.ResetTrigger("land");
-
     }
+    #endregion
 
-#endregion
-#region Turn Checks
+    #region Turn Checks
     private void StartDirectionCheck()
     {
-
-        if (DirR.transform.position.x > DirL.transform.position.x)
-        {
-            IsFacingRight = true;
-        }
-
-        else
-        {
-            IsFacingRight = false;
-        }
-
+        IsFacingRight = DirR.transform.position.x > DirL.transform.position.x;
     }
 
     private void TurnCheck()
@@ -218,7 +187,6 @@ private IEnumerator Reset()
         {
             Turn();
         }
-
         else if (UserInput.instance.moveInput.x < 0 && IsFacingRight)
         {
             Turn();
@@ -227,37 +195,20 @@ private IEnumerator Reset()
 
     private void Turn()
     {
-        if (IsFacingRight)
-        {
-            Vector3 rotator = new Vector3(transform.rotation.x, 180f, transform.rotation.z);
-            transform.rotation = Quaternion.Euler(rotator);
-            IsFacingRight = !IsFacingRight;
-        }
-
-        else
-        {
-            Vector3 rotator = new Vector3(transform.rotation.x, 0f, transform.rotation.z);
-            transform.rotation = Quaternion.Euler(rotator);
-            IsFacingRight = !IsFacingRight;
-        }
+        IsFacingRight = !IsFacingRight;
+        float rotationY = IsFacingRight ? 0f : 180f;
+        transform.rotation = Quaternion.Euler(0f, rotationY, 0f);
     }
     #endregion
-#region Debug Functions
+
+    #region Debug Functions
     private void DrawGroundCheck()
-    {   
-        Color rayColor;
-        if (IsGrounded())
-        {
-            rayColor = Color.green;
-        }
-        else
-        {
-        rayColor = Color.red;
-        }
-        
-    Debug.DrawRay(coll.bounds.center + new Vector3(coll.bounds.extents.x, 0), Vector2.down * (coll.bounds.extents.y + extraHeight), rayColor);
-    Debug.DrawRay(coll.bounds.center - new Vector3(coll.bounds.extents.x, 0), Vector2.down * (coll.bounds.extents.y + extraHeight), rayColor);
-    Debug.DrawRay(coll.bounds.center - new Vector3(coll.bounds.extents.x, coll.bounds.extents.y + extraHeight), Vector2.right * (coll.bounds.extents.x * 2), rayColor);
+    {
+        Color rayColor = IsGrounded() ? Color.green : Color.red;
+
+        Debug.DrawRay(coll.bounds.center + new Vector3(coll.bounds.extents.x, 0), Vector2.down * (coll.bounds.extents.y + extraHeight), rayColor);
+        Debug.DrawRay(coll.bounds.center - new Vector3(coll.bounds.extents.x, 0), Vector2.down * (coll.bounds.extents.y + extraHeight), rayColor);
+        Debug.DrawRay(coll.bounds.center - new Vector3(coll.bounds.extents.x, coll.bounds.extents.y + extraHeight), Vector2.right * (coll.bounds.extents.x * 2), rayColor);
     }
-#endregion
+    #endregion
 }
