@@ -5,11 +5,12 @@ public class Player : MonoBehaviour
 {
     [Header("Movement")]
     [SerializeField] private float moveSpeed = 10.0f;
-    public ParticleSystem trailFX;
+    [SerializeField] private ParticleSystem trailFX;
 
     [Header("Jump")]
     [SerializeField] private float jumpForce = 8.0f;
     [SerializeField] private float jumpTime = 0.1f;
+    public bool SchuinSpringen = true; // Toggle this in the Inspector
 
     [Header("Turn Check")]
     [SerializeField] private GameObject DirL;
@@ -105,7 +106,14 @@ public class Player : MonoBehaviour
         {
             IsJumping = true;
             JumpTimeCounter = jumpTime;
-            rb.velocity = new Vector2(0, jumpForce); // Set horizontal velocity to 0 when jumping
+            if (SchuinSpringen)
+            {
+                rb.velocity = new Vector2(rb.velocity.x, jumpForce); // Maintain horizontal velocity
+            }
+            else
+            {
+                rb.velocity = new Vector2(0, jumpForce); // Set horizontal velocity to 0 when jumping
+            }
 
             anim.SetTrigger("jump");
             trailFX.Stop();
@@ -116,7 +124,14 @@ public class Player : MonoBehaviour
         {
             if (JumpTimeCounter > 0 && IsJumping)
             {
-                rb.velocity = new Vector2(0, jumpForce); // Maintain horizontal velocity as 0
+                if (SchuinSpringen)
+                {
+                    rb.velocity = new Vector2(rb.velocity.x, jumpForce); // Maintain horizontal velocity
+                }
+                else
+                {
+                    rb.velocity = new Vector2(0, jumpForce); // Maintain horizontal velocity as 0
+                }
                 JumpTimeCounter -= Time.deltaTime;
             }
             else if (JumpTimeCounter <= 0)
